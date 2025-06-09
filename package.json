@@ -1,0 +1,15 @@
+{
+  "name": "financeproject-dashboard",
+  "version": "1.0.0",
+  "description": "A simple dashboard for visualizing unemployment and inflation data with key economic events.",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "serve": "^14.2.0"
+  },
+  "author": "",
+  "license": "MIT"
+} 
