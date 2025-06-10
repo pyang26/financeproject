@@ -132,6 +132,50 @@
             return { values, dates, eventPoints };
         }
 
+        function processInflationData(observations) {
+            const cpiValues = [];
+            const dates = [];
+            const inflationRates = [];
+            const eventPoints = [];
+
+            // Collect all CPI values and dates
+            observations.forEach(observation => {
+                if (observation.value !== '.') {
+                    cpiValues.push(parseFloat(observation.value));
+                    dates.push(observation.date);
+                }
+            });
+
+            // Calculate year-over-year inflation rate
+            for (let i = 12; i < cpiValues.length; i++) {
+                const rate = ((cpiValues[i] - cpiValues[i - 12]) / cpiValues[i - 12]) * 100;
+                inflationRates.push(rate);
+            }
+            const inflationDates = dates.slice(12);
+
+            // Only match events to exact dates in the data
+            keyEvents.forEach(event => {
+                const index = inflationDates.indexOf(event.date);
+                if (index !== -1) {
+                    // Calculate the derivative (difference from previous month)
+                    let derivative = null;
+                    if (index > 0 && index < inflationRates.length - 1) {
+                        derivative = inflationRates[index + 1] - inflationRates[index - 1];
+                    }
+                    eventPoints.push({
+                        x: event.date,
+                        y: inflationRates[index],
+                        label: event.label,
+                        description: event.description,
+                        originalDate: event.date,
+                        derivative: derivative
+                    });
+                }
+            });
+
+            return { values: inflationRates, dates: inflationDates, eventPoints };
+        }
+
         function createChart(canvasId, label, data, color) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             
@@ -210,8 +254,8 @@
 
                 // Fetch inflation data
                 const inflationData = await fetchFredData('CPIAUCSL');
-                const processedInflation = processData(inflationData);
-                createChart('inflationChart', 'Inflation Rate', processedInflation, '#FF5722');
+                const processedInflation = processInflationData(inflationData);
+                createChart('inflationChart', 'Inflation Rate (YoY %)', processedInflation, '#FF5722');
                 
                 console.log('Charts initialized successfully');
             } catch (error) {
