@@ -46,6 +46,16 @@
                     </div>
                 </div>
             </div>
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">S&P 500 Index (Monthly Close)</h5>
+                        <div class="chart-container">
+                            <canvas id="sp500Chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -218,19 +228,28 @@
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    if (context.datasetIndex === 1) {
-                                        const point = data.eventPoints[context.dataIndex];
-                                        let lines = [
-                                            `${label}: ${point.y.toFixed(2)}`,
-                                            `Event: ${point.description}`,
-                                            `Date: ${point.x}`
-                                        ];
-                                        if (point.derivative !== null) {
-                                            lines.push(`Instantaneous rate of change: ${point.derivative.toFixed(2)}`);
-                                        }
-                                        return lines;
+                                    const label = context.dataset.label || '';
+                                    const value = context.parsed.y;
+                                    const index = context.dataIndex;
+                                    const dataArr = context.dataset.data;
+
+                                    // Calculate rate of change (central difference if possible)
+                                    let derivative = null;
+                                    if (index > 0 && index < dataArr.length - 1) {
+                                        derivative = (dataArr[index + 1] - dataArr[index - 1]) / 2;
+                                    } else if (index > 0) {
+                                        derivative = dataArr[index] - dataArr[index - 1];
                                     }
-                                    return `${label}: ${context.parsed.y.toFixed(2)}`;
+
+                                    let lines = [`${label}: ${value.toFixed(2)}`];
+                                    if (derivative !== null) {
+                                        lines.push(`Instantaneous rate of change: ${derivative.toFixed(2)}`);
+                                    }
+                                    // For event points, add event info
+                                    if (context.dataset.label === 'Key Events' && context.dataset.data[index].description) {
+                                        lines.push(`Event: ${context.dataset.data[index].description}`);
+                                    }
+                                    return lines;
                                 }
                             }
                         }
@@ -256,7 +275,12 @@
                 const inflationData = await fetchFredData('CPIAUCSL');
                 const processedInflation = processInflationData(inflationData);
                 createChart('inflationChart', 'Inflation Rate (YoY %)', processedInflation, '#FF5722');
-                
+
+                // Fetch S&P 500 data
+                const sp500Data = await fetchFredData('SP500');
+                const processedSP500 = processData(sp500Data);
+                createChart('sp500Chart', 'S&P 500 Index', processedSP500, '#4CAF50');
+
                 console.log('Charts initialized successfully');
             } catch (error) {
                 console.error('Error initializing charts:', error);
